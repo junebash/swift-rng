@@ -1,6 +1,6 @@
 /// An implementation of xoshiro256**: http://xoshiro.di.unimi.it.
-public struct Xoshiro: RandomNumberGenerator, Hashable {
-  public struct State: Hashable, RawRepresentable {
+public struct XoshiroRNG: RandomNumberGenerator, Hashable, Sendable {
+  public struct State: Hashable, RawRepresentable, Sendable {
     public typealias RawValue = (UInt64, UInt64, UInt64, UInt64)
 
     @usableFromInline
@@ -67,7 +67,7 @@ public struct Xoshiro: RandomNumberGenerator, Hashable {
     withUnsafeMutableBytes(of: &rawState) { buffer in
       var index = buffer.startIndex
       for byte in byteSeed {
-        buffer[index] &= byte
+        buffer[index] ^= byte
         buffer.formIndex(after: &index)
         if index >= buffer.endIndex {
           index = buffer.startIndex
@@ -87,12 +87,13 @@ public struct Xoshiro: RandomNumberGenerator, Hashable {
 
   @inlinable
   public mutating func next() -> UInt64 {
-    defer { state.perturb() }
-    return state.value
+    let value = state.value
+    state.perturb()
+    return value
   }
 }
 
-extension Xoshiro {
+extension XoshiroRNG {
   /// Initialize with a full state.
   ///
   /// Useful for getting an exact value from `next()` after multiple runs of the RNG.
